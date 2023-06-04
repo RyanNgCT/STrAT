@@ -1,0 +1,7 @@
+.DS_Store
+pyenv/*
+.env
+dump.json
+target.png
+helpMenu.txt
+toFix.log
