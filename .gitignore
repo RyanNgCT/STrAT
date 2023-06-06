@@ -5,3 +5,4 @@ dump.json
 target.png
 helpMenu.txt
 toFix.log
+*__pycache__/

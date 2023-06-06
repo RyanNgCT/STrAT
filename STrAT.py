@@ -1,5 +1,6 @@
 import requests, re, json, sys, time, os, shutil, argparse
 import aiohttp, asyncio
+from assets.colours import bcolors
 
 """ 
 NOTES
@@ -235,9 +236,9 @@ def main():
 
                 # need to relook these metrics
                 if (harmlessCount > maliciousCount) and maliciousCount <= 9:
-                    print(f'VT: Web Resource "{finalURL}" is not malicious.')
+                    print(f'{bcolors.OKGREEN}VT: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
                 else:
-                    print(f'VT: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.')
+                    print(f'{bcolors.FAIL}VT: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.{bcolors.ENDC}')
             else:
                 print(f"VT: Request failed with status code {VT_Response.status_code}")
             print()
@@ -278,10 +279,10 @@ def main():
                 downloadURLScanImage(urlscanUriUid)
 
                 if res_payload["verdicts"]["overall"]["malicious"] == False:
-                    print(f'UrlScan: Web Resource "{finalURL}" is not malicious.')
+                    print(f'{bcolors.OKGREEN}UrlScan: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
                 else:
                     print(
-                        f'UrlScan: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.'
+                        f'{bcolors.FAIL}UrlScan: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.{bcolors.ENDC}'
                     )
 
             elif URLScan_Response.status_code == 400:
