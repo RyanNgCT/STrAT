@@ -2,7 +2,7 @@
 pyenv/*
 .env
 dump.json
-target.png
 helpMenu.txt
 toFix.log
 *__pycache__/
+results/*

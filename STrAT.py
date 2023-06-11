@@ -1,6 +1,8 @@
 import requests, re, json, sys, time, os, shutil, argparse
 import aiohttp, asyncio
 from assets.colours import bcolors
+from datetime import datetime
+from urllib.parse import urlparse
 
 """ 
 NOTES
@@ -156,18 +158,27 @@ def defangUrl(url):
     return url.replace(".", "[.]").replace("http", "hxxp")
 
 
-def downloadURLScanImage(uuid):
+def downloadURLScanImage(dir, uuid):
     imageURI = f"https://urlscan.io/screenshots/{uuid}.png"
     try:
         imageURI_resp = requests.get(url=imageURI, stream=True)
     except requests.exceptions.ConnectionError:
         sys.exit("Error in downloading the screenshot.")
     if imageURI_resp.status_code == 200:
-        with open("target.png", "wb") as f:
+        directoryToStore = f'./results/{dir}/target.png'
+        with open(directoryToStore, "wb") as f:
             shutil.copyfileobj(imageURI_resp.raw, f)
             print("URLScan Screenshot sucessfully downloaded.")
     else:
         print("URLScan Screenshot couldn't be retrieved...")
+
+
+def createDirAndLog(finalurl, urlscanUriUid):
+    now = datetime.now().strftime("%Y-%m-%d_%H%M")
+    storeDir = f'{now}-{urlparse(finalurl).netloc}'
+    os.makedirs(f'results/{storeDir}')
+    # optional custom method to download urlscan screenshot
+    downloadURLScanImage(storeDir, urlscanUriUid)
 
 
 def main():
@@ -234,11 +245,13 @@ def main():
                     f"[VT Info] AV(s) Flagging Website as harmless: {harmlessCount}, AV(s) Flagging Website as malicious: {maliciousCount}"
                 )
 
+                VT_mal_flag = False
                 # need to relook these metrics
                 if (harmlessCount > maliciousCount) and maliciousCount <= 9:
                     print(f'{bcolors.OKGREEN}VT: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
                 else:
                     print(f'{bcolors.FAIL}VT: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.{bcolors.ENDC}')
+                    VT_mal_flag = True
             else:
                 print(f"VT: Request failed with status code {VT_Response.status_code}")
             print()
@@ -275,15 +288,15 @@ def main():
                 except IndexError:
                     finalURL = intermediateData["data"]["requests"][0]["request"]["documentURL"]
 
-                # optional custom method to download urlscan screenshot
-                downloadURLScanImage(urlscanUriUid)
-
                 if res_payload["verdicts"]["overall"]["malicious"] == False:
+                    if VT_mal_flag: # add check since VT more credible (green but defange output)
+                        finalURL = defangUrl(finalURL)
                     print(f'{bcolors.OKGREEN}UrlScan: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
                 else:
-                    print(
-                        f'{bcolors.FAIL}UrlScan: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.{bcolors.ENDC}'
-                    )
+                    finalURL = defangUrl(finalURL)
+                    print(f'{bcolors.FAIL}UrlScan: Web Resource "{finalURL}" is MALICIOUS.{bcolors.ENDC}')
+
+                createDirAndLog(finalURL, urlscanUriUid)     
 
             elif URLScan_Response.status_code == 400:
                 if (
@@ -293,9 +306,6 @@ def main():
                 else:
                     print("Blacklisted site by URL Scan... Skipping...")
 
-                    # remove older screenshot so as to not confuse user
-                    if os.path.exists("target.png"):
-                        os.remove("target.png")
             else:
                 print(
                     f"UrlScan: Request failed with status code {URLScan_Response.status_code}"
