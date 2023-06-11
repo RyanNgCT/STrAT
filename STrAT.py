@@ -3,6 +3,7 @@ import aiohttp, asyncio
 from assets.colours import bcolors
 from datetime import datetime
 from urllib.parse import urlparse
+from assets.CustomThread import *
 
 """ 
 NOTES
@@ -151,7 +152,7 @@ async def waitTilReply(url):
                 print(
                     f"Urlscan API endpoint returned {response_status}. Waiting another 5 sec for results..."
                 )  # replace with progress bar of sorts(?)
-            await asyncio.sleep(5)
+            await asyncio.sleep(3)
 
 
 def defangUrl(url):
@@ -181,9 +182,121 @@ def createDirAndLog(finalurl, urlscanUriUid):
     downloadURLScanImage(storeDir, urlscanUriUid)
 
 
+def runVT(rawURL, API_KEYS, VTIndex):
+    headerFormat = {"Content-Type": "application/json", "x-apikey": API_KEYS[0]}
+    data = {"url": rawURL, "visibility": "public", "analyze": "true"}
+    try:
+        VT_Response = requests.post(
+            url="https://www.virustotal.com/api/v3/urls",
+            headers=headerFormat,
+            params=data,
+        )
+    except requests.exceptions.ConnectionError:
+        sys.exit(
+            "VirusTotal endpoint unreachable. Check your internet connection please."
+        )
+    if VT_Response.status_code == 200:
+        vtUri = json.loads(VT_Response.content)["data"]["links"]["self"]
+        headerFormat = {"accept": "application/json", "x-apikey": API_KEYS[0]}
+
+        # get unique id for VT (scan result)
+        moddedId = json.loads(VT_Response.content)["data"]["id"]
+        for index, char in enumerate(moddedId[::-1]):
+            if char == "-":
+                index = len(moddedId) - index
+                moddedId = moddedId[: index - 1].strip("u-")
+                break
+
+        # code for checking if url was previously scanned by VT
+        harmlessCount, maliciousCount = 0, 0
+        while True:
+            vtReport = requests.get(url=vtUri, headers=headerFormat)
+            vtReport = vtReport.json()
+            harmlessCount = vtReport["data"]["attributes"]["stats"]["harmless"]
+            maliciousCount = vtReport["data"]["attributes"]["stats"]["malicious"]
+
+            # Scan Complete Check (didn't wanna implement async)
+            if vtReport["data"]["attributes"]["status"] == "completed":
+                otherFormat = (
+                    f"https://www.virustotal.com/api/v3/urls/{moddedId}"
+                )
+                resp = requests.get(url=otherFormat, headers=headerFormat)
+                resp = resp.json()
+                try:
+                    finalURL = resp["data"]["attributes"]["last_final_url"]
+                except KeyError:
+                    finalURL = rawURL
+                break
+            time.sleep(3)
+
+        # need to relook these metrics
+        if (harmlessCount > maliciousCount) and maliciousCount <= 9:
+            VTIndex = 0
+            return VTIndex, finalURL, harmlessCount, maliciousCount
+        return 1, defangUrl(finalURL), harmlessCount, maliciousCount # malicious
+    else:
+        print(f"VT: Request failed with status code {VT_Response.status_code}")
+
+
+def runURS(rawURL, API_KEYS, URLScanIndex):
+    headers = {"API-Key": API_KEYS[1], "Content-Type": "application/json"}
+    data = {"url": rawURL, "visibility": "public"}
+
+    # Request
+    URLScan_Response = requests.post(
+        "https://urlscan.io/api/v1/scan/",
+        headers=headers,
+        data=json.dumps(data),
+    )
+    if URLScan_Response.status_code == 200:
+        urlscanUriUid = json.loads(URLScan_Response.content)["uuid"]
+        resultsPageURLFormat = (
+            f"https://urlscan.io/api/v1/result/{urlscanUriUid}/"
+        )
+
+        # prevent Event Loop error in Windows
+        if os.name == "nt":
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy()
+            )
+
+        # Response Method
+        res_payload = asyncio.run(waitTilReply(resultsPageURLFormat))
+
+        # quite a messy way to sieve output hmm...
+        intermediateData = json.loads(json.dumps(res_payload))
+        try:
+            finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
+        except IndexError:
+            finalURL = intermediateData["data"]["requests"][0]["request"]["documentURL"]
+
+        if res_payload["verdicts"]["overall"]["malicious"] == False:
+            createDirAndLog(finalURL, urlscanUriUid)
+            URLScanIndex = 0
+        else:
+            finalURL = defangUrl(finalURL)
+            createDirAndLog(finalURL, urlscanUriUid)
+            URLScanIndex = 1
+        return URLScanIndex, finalURL
+
+    elif URLScan_Response.status_code == 400:
+        if (
+            URLScan_Response.json()["message"] == "DNS Error - Could not resolve domain"
+        ):
+            print("UrlScan: Cannot resolve URL domain.")
+            return -1, None
+        else:
+            print("Blacklisted site by URL Scan... Skipping...")
+            return -1, None
+
+    else:
+        print(
+            f"UrlScan: Request failed with status code {URLScan_Response.status_code}"
+        )
+
+
 def main():
     API_KEYS = getAPIKey()
-
     userUrl = input("Enter a site url to check against: ").strip()
     if userUrl == "":
         sys.exit("Empty URL provided. Quitting...")
@@ -194,122 +307,24 @@ def main():
         sys.exit("Invalid URL Supplied.")
     else:
         # send values based on return value of url validation function
+        VTIndex, URLScanIndex = -1, -1
         if rawURL:
-            # === VT Request and Response ===
-            headerFormat = {"Content-Type": "application/json", "x-apikey": API_KEYS[0]}
-            data = {"url": rawURL, "visibility": "public", "analyze": "true"}
-            try:
-                VT_Response = requests.post(
-                    url="https://www.virustotal.com/api/v3/urls",
-                    headers=headerFormat,
-                    params=data,
-                )
-            except requests.exceptions.ConnectionError:
-                sys.exit(
-                    "VirusTotal endpoint unreachable. Check your internet connection please."
-                )
-            if VT_Response.status_code == 200:
-                vtUri = json.loads(VT_Response.content)["data"]["links"]["self"]
-                headerFormat = {"accept": "application/json", "x-apikey": API_KEYS[0]}
+            t1 = CusThread(target=runVT, args=(rawURL, API_KEYS, VTIndex))
+            t2 = CusThread(target=runURS, args=(rawURL, API_KEYS, URLScanIndex))
+            t1.start()
+            t2.start()
+            VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
+            URLSmaliciousStatus, URLSurl = t2.join()
 
-                # get unique id for VT (scan result)
-                moddedId = json.loads(VT_Response.content)["data"]["id"]
-                for index, char in enumerate(moddedId[::-1]):
-                    if char == "-":
-                        index = len(moddedId) - index
-                        moddedId = moddedId[: index - 1].strip("u-")
-                        break
-
-                # code for checking if url was previously scanned by VT
-                harmlessCount, maliciousCount = 0, 0
-                while True:
-                    vtReport = requests.get(url=vtUri, headers=headerFormat)
-                    vtReport = vtReport.json()
-                    harmlessCount = vtReport["data"]["attributes"]["stats"]["harmless"]
-                    maliciousCount = vtReport["data"]["attributes"]["stats"]["malicious"]
-
-                    # Scan Complete Check (didn't wanna implement async)
-                    if vtReport["data"]["attributes"]["status"] == "completed":
-                        otherFormat = (
-                            f"https://www.virustotal.com/api/v3/urls/{moddedId}"
-                        )
-                        resp = requests.get(url=otherFormat, headers=headerFormat)
-                        resp = resp.json()
-                        try:
-                            finalURL = resp["data"]["attributes"]["last_final_url"]
-                        except KeyError:
-                            finalURL = rawURL
-                        break
-                    time.sleep(2)
-                print(
-                    f"[VT Info] AV(s) Flagging Website as harmless: {harmlessCount}, AV(s) Flagging Website as malicious: {maliciousCount}"
-                )
-
-                VT_mal_flag = False
-                # need to relook these metrics
-                if (harmlessCount > maliciousCount) and maliciousCount <= 9:
-                    print(f'{bcolors.OKGREEN}VT: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
-                else:
-                    print(f'{bcolors.FAIL}VT: Web Resource "{defangUrl(finalURL)}" is MALICIOUS.{bcolors.ENDC}')
-                    VT_mal_flag = True
+            if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
+                print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
+            elif VTmaliciousStatus != URLSmaliciousStatus and URLSmaliciousStatus == 1:
+                print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not malicious. May require further validation.\n")
+            elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
+                print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
             else:
-                print(f"VT: Request failed with status code {VT_Response.status_code}")
-            print()
+                print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
 
-            # === Urlscan Request and Response ===
-            headers = {"API-Key": API_KEYS[1], "Content-Type": "application/json"}
-            data = {"url": rawURL, "visibility": "public"}
-
-            # Request
-            URLScan_Response = requests.post(
-                "https://urlscan.io/api/v1/scan/",
-                headers=headers,
-                data=json.dumps(data),
-            )
-            if URLScan_Response.status_code == 200:
-                urlscanUriUid = json.loads(URLScan_Response.content)["uuid"]
-                resultsPageURLFormat = (
-                    f"https://urlscan.io/api/v1/result/{urlscanUriUid}/"
-                )
-
-                # prevent Event Loop error in Windows
-                if os.name == "nt":
-                    asyncio.set_event_loop_policy(
-                        asyncio.WindowsSelectorEventLoopPolicy()
-                    )
-
-                # Response Method
-                res_payload = asyncio.run(waitTilReply(resultsPageURLFormat))
-
-                # quite a messy way to sieve output hmm...
-                intermediateData = json.loads(json.dumps(res_payload))
-                try:
-                    finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
-                except IndexError:
-                    finalURL = intermediateData["data"]["requests"][0]["request"]["documentURL"]
-
-                if res_payload["verdicts"]["overall"]["malicious"] == False:
-                    if VT_mal_flag: # add check since VT more credible (green but defange output)
-                        finalURL = defangUrl(finalURL)
-                    print(f'{bcolors.OKGREEN}UrlScan: Web Resource "{finalURL}" is not malicious.{bcolors.ENDC}')
-                else:
-                    finalURL = defangUrl(finalURL)
-                    print(f'{bcolors.FAIL}UrlScan: Web Resource "{finalURL}" is MALICIOUS.{bcolors.ENDC}')
-
-                createDirAndLog(finalURL, urlscanUriUid)     
-
-            elif URLScan_Response.status_code == 400:
-                if (
-                    URLScan_Response.json()["message"] == "DNS Error - Could not resolve domain"
-                ):
-                    print("UrlScan: Cannot resolve URL domain.")
-                else:
-                    print("Blacklisted site by URL Scan... Skipping...")
-
-            else:
-                print(
-                    f"UrlScan: Request failed with status code {URLScan_Response.status_code}"
-                )
 
         # issues contacting server/totally invalid -> may need to validate 404
         else:
