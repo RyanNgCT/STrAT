@@ -152,7 +152,7 @@ async def waitTilReply(url):
                 print(
                     f"Urlscan API endpoint returned {response_status}. Waiting another 5 sec for results..."
                 )  # replace with progress bar of sorts(?)
-            await asyncio.sleep(3)
+            await asyncio.sleep(4)
 
 
 def defangUrl(url):
@@ -166,7 +166,7 @@ def downloadURLScanImage(dir, uuid):
     except requests.exceptions.ConnectionError:
         sys.exit("Error in downloading the screenshot.")
     if imageURI_resp.status_code == 200:
-        directoryToStore = f'./results/{dir}/target.png'
+        directoryToStore = f'{dir}/target.png'
         with open(directoryToStore, "wb") as f:
             shutil.copyfileobj(imageURI_resp.raw, f)
             print("URLScan Screenshot sucessfully downloaded.")
@@ -176,8 +176,10 @@ def downloadURLScanImage(dir, uuid):
 
 def createDirAndLog(finalurl, urlscanUriUid):
     now = datetime.now().strftime("%Y-%m-%d_%H%M")
-    storeDir = f'{now}-{urlparse(finalurl).netloc}'
-    os.makedirs(f'results/{storeDir}')
+    storeDir = f'results/{now}-{urlparse(finalurl).netloc}'
+    if os.path.exists(storeDir):
+        shutil.rmtree(storeDir)
+    os.makedirs(storeDir)
     # optional custom method to download urlscan screenshot
     downloadURLScanImage(storeDir, urlscanUriUid)
 
@@ -323,7 +325,10 @@ def main():
             elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
                 print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
             else:
-                print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
+                if URLSurl != None:
+                    print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
+                else:
+                    print(f"{bcolors.OKGREEN}{VTurl}{bcolors.ENDC} is quite likely benign.\n")
 
 
         # issues contacting server/totally invalid -> may need to validate 404
