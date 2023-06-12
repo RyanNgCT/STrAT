@@ -246,11 +246,16 @@ def runURS(rawURL, API_KEYS, URLScanIndex):
     data = {"url": rawURL, "visibility": "public"}
 
     # Request
-    URLScan_Response = requests.post(
-        "https://urlscan.io/api/v1/scan/",
-        headers=headers,
-        data=json.dumps(data),
-    )
+    try:
+        URLScan_Response = requests.post(
+            "https://urlscan.io/api/v1/scan/",
+            headers=headers,
+            data=json.dumps(data),
+        )
+    except requests.exceptions.ConnectionError:
+        sys.exit(
+            "URLScan endpoint unreachable. Check your internet connection please."
+        )
     if URLScan_Response.status_code == 200:
         urlscanUriUid = json.loads(URLScan_Response.content)["uuid"]
         resultsPageURLFormat = (
@@ -315,27 +320,31 @@ def main():
             t2 = CusThread(target=runURS, args=(rawURL, API_KEYS, URLScanIndex))
             t1.start()
             t2.start()
-            VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
-            URLSmaliciousStatus, URLSurl, resPath = t2.join()
-
-            if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
-                print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
-                orgPath = resPath
-                finalPath = resPath.replace(".", "[.]")
-                os.renames(os.getcwd() + f"/{orgPath}", os.getcwd() + f"/{finalPath}")
-            elif VTmaliciousStatus != URLSmaliciousStatus and URLSmaliciousStatus == 1:
-                print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not malicious. May require further validation.\n")
-            elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
-                print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
+            try:
+                VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
+                URLSmaliciousStatus, URLSurl, resPath = t2.join()
+            except AttributeError:
+                sys.exit("Unable to start thread. Please check your internet connection.")
+            except ValueError:
+                print(f"VirusTotal has classified {bcolors.OKGREEN}{VTurl}{bcolors.ENDC} as likely benign.\n")
             else:
-                # print(VTmaliciousStatus, URLSmaliciousStatus)
-                if URLSurl != None:
-                    print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
+                if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
+                    print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
+                    orgPath = resPath
+                    finalPath = resPath.replace(".", "[.]")
+                    os.renames(os.getcwd() + f"/{orgPath}", os.getcwd() + f"/{finalPath}")
+                elif VTmaliciousStatus != URLSmaliciousStatus and URLSmaliciousStatus == 1:
+                    print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not malicious. May require further validation.\n")
+                elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
+                    print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
                 else:
-                    print(f"{bcolors.OKGREEN}{VTurl}{bcolors.ENDC} is quite likely benign.\n")
+                    # print(VTmaliciousStatus, URLSmaliciousStatus)
+                    if URLSurl != None:
+                        print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
+                    else:
+                        print(f"{bcolors.OKGREEN}{VTurl}{bcolors.ENDC} is quite likely benign.\n")
 
-
-        # issues contacting server/totally invalid -> may need to validate 404
+            # issues contacting server/totally invalid -> may need to validate 404
         else:
             print("Invalid URL Entered or server not contactable.")
 
