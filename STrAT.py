@@ -21,6 +21,7 @@ headers = {'API-Key':'$apikey','Content-Type':'application/json'}
 data = {"url": "https://urlyouwanttoscan.com/path/", "visibility": "public"}
 response = requests.post('https://urlscan.io/api/v1/scan/',headers=headers, data=json.dumps(data))
 
+4. All Scans are default as public
 """
 
 
@@ -150,7 +151,7 @@ async def waitTilReply(url):
                 return text
             else:
                 print(
-                    f"Urlscan API endpoint returned {response_status}. Waiting another 5 sec for results..."
+                    f"Urlscan API endpoint returned {response_status}. Waiting another 4 sec for results..."
                 )  # replace with progress bar of sorts(?)
             await asyncio.sleep(4)
 
@@ -185,9 +186,9 @@ def createDirAndLog(finalurl, urlscanUriUid):
     return storeDir
 
 
-def runVT(rawURL, API_KEYS, VTIndex):
+def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
     headerFormat = {"Content-Type": "application/json", "x-apikey": API_KEYS[0]}
-    data = {"url": rawURL, "visibility": "public", "analyze": "true"}
+    data = {"url": rawURL, "visibility": scanVisibility, "analyze": "true"}
     try:
         VT_Response = requests.post(
             url="https://www.virustotal.com/api/v3/urls",
@@ -241,9 +242,9 @@ def runVT(rawURL, API_KEYS, VTIndex):
         print(f"VT: Request failed with status code {VT_Response.status_code}")
 
 
-def runURS(rawURL, API_KEYS, URLScanIndex):
+def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
     headers = {"API-Key": API_KEYS[1], "Content-Type": "application/json"}
-    data = {"url": rawURL, "visibility": "public"}
+    data = {"url": rawURL, "visibility": scanVisibility}
 
     # Request
     try:
@@ -304,9 +305,23 @@ def runURS(rawURL, API_KEYS, URLScanIndex):
 
 def main():
     API_KEYS = getAPIKey()
-    userUrl = input("Enter a site url to check against: ").strip()
-    if userUrl == "":
-        sys.exit("Empty URL provided. Quitting...")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).")
+    parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", type=int)
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
+    args = parser.parse_args()
+    userUrl = str(args.url).strip()
+    scanVisibilityInt = int(args.visibility)
+    if scanVisibilityInt not in (1, 2, 3):
+        print("Please check scan visibility argument again.\n")
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    else:
+        visibilityMapping = {1: "public", 2: "private", 3: "unlisted"}
+        scanVisibility = visibilityMapping[scanVisibilityInt]
 
     try:
         rawURL = checkAndSanitizeUri(userUrl)
@@ -316,8 +331,8 @@ def main():
         # send values based on return value of url validation function
         VTIndex, URLScanIndex = -1, -1
         if rawURL:
-            t1 = CusThread(target=runVT, args=(rawURL, API_KEYS, VTIndex))
-            t2 = CusThread(target=runURS, args=(rawURL, API_KEYS, URLScanIndex))
+            t1 = CusThread(target=runVT, args=(rawURL, API_KEYS, VTIndex, scanVisibility))
+            t2 = CusThread(target=runURS, args=(rawURL, API_KEYS, URLScanIndex, scanVisibility))
             t1.start()
             t2.start()
             try:
@@ -338,31 +353,14 @@ def main():
                 elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
                     print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
                 else:
-                    # print(VTmaliciousStatus, URLSmaliciousStatus)
                     if URLSurl != None:
                         print(f"{bcolors.OKGREEN}{URLSurl}{bcolors.ENDC} is quite likely benign.\n")
                     else:
                         print(f"{bcolors.OKGREEN}{VTurl}{bcolors.ENDC} is quite likely benign.\n")
 
-            # issues contacting server/totally invalid -> may need to validate 404
+        # issues contacting server/totally invalid -> may need to validate 404
         else:
             print("Invalid URL Entered or server not contactable.")
-
-        ## Future Feature to implement
-
-        # userSecurityOption = input('Enter a security option: < [P]ublic (default) || [U]nlisted || P[R]ivate > :')
-        # securityOptionSettings = ''
-
-        # if userSecurityOption.upper() == 'P' or userSecurityOption == '':
-        #     securityOptionSettings = 'public'
-        # elif userSecurityOption.upper() == 'U':
-        #     securityOptionSettings = 'unlisted'
-        # elif userSecurityOption.upper() == 'R':
-        #     securityOptionSettings = 'private'
-        # else:
-        #     print("Incorrect setting entered... Defaulting to public anyways :)")
-        #     securityOptionSettings = 'public'
-
 
 if __name__ == "__main__":
     main()

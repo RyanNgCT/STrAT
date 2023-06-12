@@ -12,7 +12,7 @@ _Subjected to changes_ as the project progresses
 
 - [ ] **chore:** Scanning links provided by the user using both the Urlscan.io and VirusTotal APIs concurrently
     - [ ] user inputs still require validation 👀
-    - [ ] addition of scan type feature (public, private or unlisted)
+    - [x] addition of scan type feature (public, private or unlisted)
     - [x] removed potentially dangerous C2 callback by script -> used phishTank for now
     - [x] request timeout (async) for urlscan
     - [x] fix VT Url Analysis Report Output Issue; VT unscanned url returns `0` for `"malicious"` and `"harmless"` categories
@@ -21,7 +21,7 @@ _Subjected to changes_ as the project progresses
     - [x] add requirements.txt
 
 - [ ] **additional features:** not entirely sure if feasible
-    - [ ] Having the tool accept command line arguments and build help menu (probably using `argparse` or `getopts` python libraries?) 
+    - [x] Having the tool accept command line arguments and build help menu (probably using `argparse` or `getopts` python libraries?) 
     - [ ] Loading bar for API load 
     - [ ] Use some AI engine for heuristic scanning
 
