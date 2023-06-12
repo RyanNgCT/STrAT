@@ -306,22 +306,26 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
 def main():
     API_KEYS = getAPIKey()
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).")
-    parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", type=int)
+    parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).", required=True)
+    parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", \
+                        type=int, required=False)
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
 
     args = parser.parse_args()
     userUrl = str(args.url).strip()
-    scanVisibilityInt = int(args.visibility)
-    if scanVisibilityInt not in (1, 2, 3):
-        print("Please check scan visibility argument again.\n")
-        parser.print_help(sys.stderr)
-        sys.exit(1)
+    if args.visibility:
+        scanVisibilityInt = int(args.visibility)
+        if scanVisibilityInt not in (1, 2, 3):
+            print("Please check scan visibility argument again.\n")
+            parser.print_help(sys.stderr)
+            sys.exit(1)
+        else:
+            visibilityMapping = {1: "public", 2: "private", 3: "unlisted"}
+            scanVisibility = visibilityMapping[scanVisibilityInt]
     else:
-        visibilityMapping = {1: "public", 2: "private", 3: "unlisted"}
-        scanVisibility = visibilityMapping[scanVisibilityInt]
+        scanVisibility = "public"
 
     try:
         rawURL = checkAndSanitizeUri(userUrl)
