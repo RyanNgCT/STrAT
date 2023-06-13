@@ -4,6 +4,7 @@ from assets.colours import bcolors
 from datetime import datetime
 from urllib.parse import urlparse
 from assets.CustomThread import *
+from assets.Wheel import SpinnerThread
 
 """ 
 NOTES
@@ -145,14 +146,12 @@ async def waitTilReply(url):
         while True:
             response_status = await fetch(session, url)
             if response_status == 200:
-                print("API endpoint returned 200. Processing is complete.")
+                print("\nAPI endpoint returned 200. Processing is complete.\n")
                 async with session.get(url) as resp:
                     text = await resp.json()
                 return text
             else:
-                print(
-                    f"Urlscan API endpoint returned {response_status}. Waiting another 4 sec for results..."
-                )  # replace with progress bar of sorts(?)
+                pass
             await asyncio.sleep(4)
 
 
@@ -170,9 +169,9 @@ def downloadURLScanImage(dir, uuid):
         directoryToStore = f'{dir}/target.png'
         with open(directoryToStore, "wb") as f:
             shutil.copyfileobj(imageURI_resp.raw, f)
-            print("URLScan Screenshot sucessfully downloaded.")
+            print("\nURLScan Screenshot sucessfully downloaded.\n")
     else:
-        print("URLScan Screenshot couldn't be retrieved...")
+        print("\nURLScan Screenshot couldn't be retrieved...\n")
 
 
 def createDirAndLog(finalurl, urlscanUriUid):
@@ -291,10 +290,10 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
         if (
             URLScan_Response.json()["message"] == "DNS Error - Could not resolve domain"
         ):
-            print("UrlScan: Cannot resolve URL domain.")
+            print("\nUrlScan: Cannot resolve URL domain.")
             return -1, None
         else:
-            print("Blacklisted site by URL Scan... Skipping...")
+            print("\nBlacklisted site by URL Scan... Skipping...")
             return -1, None
 
     else:
@@ -305,7 +304,8 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
 
 def main():
     API_KEYS = getAPIKey()
-    parser = argparse.ArgumentParser()
+    argDesc = '''STrAT v0.3: A VirusTotal x URLScan.io Website Scanning Tool.\nPlease ensure you do not submit sensitive links!\n'''
+    parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter, description= argDesc)
     parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).", required=True)
     parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", \
                         type=int, required=False)
@@ -335,6 +335,8 @@ def main():
         # send values based on return value of url validation function
         VTIndex, URLScanIndex = -1, -1
         if rawURL:
+            spWheel1 = SpinnerThread("Processing...")
+            spWheel1.start()
             t1 = CusThread(target=runVT, args=(rawURL, API_KEYS, VTIndex, scanVisibility))
             t2 = CusThread(target=runURS, args=(rawURL, API_KEYS, URLScanIndex, scanVisibility))
             t1.start()
@@ -343,10 +345,13 @@ def main():
                 VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
                 URLSmaliciousStatus, URLSurl, resPath = t2.join()
             except AttributeError:
+                spWheel1.stop()
                 sys.exit("Unable to start thread. Please check your internet connection.")
             except ValueError:
+                spWheel1.stop()
                 print(f"VirusTotal has classified {bcolors.OKGREEN}{VTurl}{bcolors.ENDC} as likely benign.\n")
             else:
+                spWheel1.stop()
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
                     orgPath = resPath
