@@ -7,8 +7,10 @@ class SpinnerThread(threading.Thread):
         self.text = text
         self.completed = False
 
-    def stop(self):
-        sys.stdout.write("\nCompleted.\n")
+    def stop(self, url=None):
+        # check TypeError (invalid url) -> not display completed msg for progress wheel
+        if not url:
+            sys.stdout.write("\nCompleted.\n")
         sys.stdout.flush()
         self.completed = True
         self._stopevent.set()

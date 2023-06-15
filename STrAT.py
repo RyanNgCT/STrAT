@@ -80,13 +80,11 @@ def checkURLProtoinURI(raw_uri):
             return False
         if result.status_code == 200:
             return tryHTTPFirst
-        elif (
+        elif ( 
             result.status_code == 429 and 
-            b"You have exceeded the request rate limit for this method." in result.content
-        ):
-            sys.exit(
-                "Please wait before submitting request again. PhishTank is throttling your traffic..."
-            )
+            b"You have exceeded the request rate limit for this method." in result.content 
+            ):
+            sys.exit("Please wait before submitting request again. PhishTank is throttling your traffic...")
 
         # Redirect (Perm or Temp) -> Change proto to https
         elif result.status_code == 301 or result.status_code == 302:
@@ -301,6 +299,22 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
             f"UrlScan: Request failed with status code {URLScan_Response.status_code}"
         )
 
+def clearDirectories():
+    try:
+        directoryCount = len(next(os.walk('results'))[1])
+    except StopIteration:
+        return 'Unable to clear old directories.'
+    
+    dirList = []
+    for root, dirs, files in os.walk('results'):
+        for dir in dirs:
+            dirList.append(root + os.sep + dir)
+
+    while directoryCount > 15:
+        shutil.rmtree(dirList[0])
+        dirList.remove(dirList[0])
+        directoryCount -= 1
+
 
 def main():
     API_KEYS = getAPIKey()
@@ -327,6 +341,10 @@ def main():
     else:
         scanVisibility = "public"
 
+    err = clearDirectories()
+    if err: 
+        print(err)
+
     try:
         rawURL = checkAndSanitizeUri(userUrl)
     except ValueError:
@@ -350,6 +368,9 @@ def main():
             except ValueError:
                 spWheel1.stop()
                 print(f"VirusTotal has classified {bcolors.OKGREEN}{VTurl}{bcolors.ENDC} as likely benign.\n")
+            except TypeError:
+                spWheel1.stop(rawURL)
+                sys.exit("Please verify the url entered again.")
             else:
                 spWheel1.stop()
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
