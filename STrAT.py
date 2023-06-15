@@ -310,7 +310,7 @@ def clearDirectories():
         for dir in dirs:
             dirList.append(root + os.sep + dir)
 
-    while directoryCount > 15:
+    while directoryCount > 14:
         shutil.rmtree(dirList[0])
         dirList.remove(dirList[0])
         directoryCount -= 1
@@ -322,7 +322,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter, description= argDesc)
     parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).", required=True)
     parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", \
-                        type=int, required=False)
+                        type=int, required=False, choices=[1, 2, 3])
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -331,18 +331,14 @@ def main():
     userUrl = str(args.url).strip()
     if args.visibility:
         scanVisibilityInt = int(args.visibility)
-        if scanVisibilityInt not in (1, 2, 3):
-            print("Please check scan visibility argument again.\n")
-            parser.print_help(sys.stderr)
-            sys.exit(1)
-        else:
-            visibilityMapping = {1: "public", 2: "private", 3: "unlisted"}
-            scanVisibility = visibilityMapping[scanVisibilityInt]
+        visibilityMapping = {1: "public", 2: "private", 3: "unlisted"}
+        scanVisibility = visibilityMapping[scanVisibilityInt]
     else:
+        # default to public scan
         scanVisibility = "public"
 
     err = clearDirectories()
-    if err: 
+    if err:
         print(err)
 
     try:
@@ -363,9 +359,9 @@ def main():
                 VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
                 URLSmaliciousStatus, URLSurl, resPath = t2.join()
             except AttributeError:
-                spWheel1.stop()
-                sys.exit("Unable to start thread. Please check your internet connection.")
-            except ValueError:
+                spWheel1.stop(rawURL)
+                sys.exit("\nUnable to start thread. Please check your internet connection.")
+            except ValueError: # returns nothing (i.e., url on urlscan blacklist)
                 spWheel1.stop()
                 print(f"VirusTotal has classified {bcolors.OKGREEN}{VTurl}{bcolors.ENDC} as likely benign.\n")
             except TypeError:
