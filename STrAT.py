@@ -5,6 +5,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from assets.CustomThread import *
 from assets.Wheel import SpinnerThread
+from pycountry import countries
 
 """ 
 NOTES
@@ -71,7 +72,7 @@ def checkURLProtoinURI(raw_uri):
         # Use Phishtank API to check connectivity if no proto specified
         phishTankAPILink = "https://checkurl.phishtank.com/checkurl/"
         tryHTTPFirst = "http://" + raw_uri
-        print(f"[INFO] Trying {tryHTTPFirst}...\n")
+        print(f"[INFO] Trying {defangUrl(tryHTTPFirst)}...\n")
         try:
             result = requests.post(
                 url=phishTankAPILink, data={"url": tryHTTPFirst, "format": "json"}
@@ -89,7 +90,7 @@ def checkURLProtoinURI(raw_uri):
         # Redirect (Perm or Temp) -> Change proto to https
         elif result.status_code == 301 or result.status_code == 302:
             tryHTTPSNext = "https://" + raw_uri
-            print(f"[INFO] Trying {tryHTTPSNext} now...\n")
+            print(f"[INFO] Trying {defangUrl(tryHTTPSNext)} now...\n")
             try:
                 result2 = requests.post(
                     url=phishTankAPILink, data={"url": tryHTTPSNext, "format": "json"}
@@ -231,7 +232,7 @@ def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
             time.sleep(3)
 
         # need to relook these metrics
-        if (harmlessCount > maliciousCount) and maliciousCount <= 9:
+        if (harmlessCount > maliciousCount) and maliciousCount < 8:
             VTIndex = 0
             return VTIndex, finalURL, harmlessCount, maliciousCount
         return 1, defangUrl(finalURL), harmlessCount, maliciousCount # malicious
@@ -271,6 +272,9 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
 
         # quite a messy way to sieve output hmm...
         intermediateData = json.loads(json.dumps(res_payload))
+        ipData = intermediateData["page"]
+        with open('dump.json', 'w') as f:
+            json.dump(intermediateData, f)
         try:
             finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
         except IndexError:
@@ -282,7 +286,7 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
             finalURL = defangUrl(finalURL)
             URLScanIndex = 1
         resPath = createDirAndLog(finalURL, urlscanUriUid)
-        return URLScanIndex, finalURL, resPath
+        return URLScanIndex, finalURL, resPath, ipData
 
     elif URLScan_Response.status_code == 400:
         if (
@@ -323,6 +327,8 @@ def main():
     parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).", required=True)
     parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", \
                         type=int, required=False, choices=[1, 2, 3])
+    parser.add_argument("-v","--verbose", help="Display more verbose output", action='store_true', required=False)
+
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -357,7 +363,7 @@ def main():
             t2.start()
             try:
                 VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
-                URLSmaliciousStatus, URLSurl, resPath = t2.join()
+                URLSmaliciousStatus, URLSurl, resPath, ipData = t2.join()
             except AttributeError:
                 spWheel1.stop(rawURL)
                 sys.exit("\nUnable to start thread. Please check your internet connection.")
@@ -369,6 +375,13 @@ def main():
                 sys.exit("Please verify the url entered again.")
             else:
                 spWheel1.stop()
+                if args.verbose:
+                    country, city = countries.get(alpha_2=str(ipData["country"])), countries.get(alpha_2=str(ipData["city"]))
+                    print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
+                    URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}"
+                    if city:
+                        URS_str += f", {city}."
+                    print(URS_str)
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
                     orgPath = resPath
