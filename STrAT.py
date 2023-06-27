@@ -273,8 +273,8 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
         # quite a messy way to sieve output hmm...
         intermediateData = json.loads(json.dumps(res_payload))
         ipData = intermediateData["page"]
-        with open('dump.json', 'w') as f:
-            json.dump(intermediateData, f)
+        # with open('dump.json', 'w') as f:
+        #     json.dump(intermediateData, f)
         try:
             finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
         except IndexError:
@@ -378,9 +378,10 @@ def main():
                 if args.verbose:
                     country, city = countries.get(alpha_2=str(ipData["country"])), countries.get(alpha_2=str(ipData["city"]))
                     print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
-                    URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}"
+                    URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
                     if city:
-                        URS_str += f", {city}."
+                        URS_str = URS_str.rstrip("\n")
+                        URS_str += f", {city}.\n"
                     print(URS_str)
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
