@@ -230,7 +230,6 @@ def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
                     finalURL = rawURL
                 break
             time.sleep(3)
-
         # need to relook these metrics
         if (harmlessCount > maliciousCount) and maliciousCount < 8:
             VTIndex = 0
@@ -273,11 +272,9 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
         # quite a messy way to sieve output hmm...
         intermediateData = json.loads(json.dumps(res_payload))
         ipData = intermediateData["page"]
-        # with open('dump.json', 'w') as f:
-        #     json.dump(intermediateData, f)
         try:
             finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
-        except IndexError:
+        except (IndexError, KeyError) as e:
             finalURL = intermediateData["data"]["requests"][0]["request"]["documentURL"]
 
         if res_payload["verdicts"]["overall"]["malicious"] == False:
@@ -376,13 +373,14 @@ def main():
             else:
                 spWheel1.stop()
                 if args.verbose:
-                    country, city = countries.get(alpha_2=str(ipData["country"])), countries.get(alpha_2=str(ipData["city"]))
                     print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
-                    URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
-                    if city:
-                        URS_str = URS_str.rstrip("\n")
-                        URS_str += f", {city}.\n"
-                    print(URS_str)
+                    if "country" in ipData and "city" in ipData:
+                        country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
+                        URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
+                        if city:
+                            URS_str = URS_str.rstrip("\n")
+                            URS_str += f", {city}.\n"
+                        print(URS_str)
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
                     orgPath = resPath
