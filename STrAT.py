@@ -201,13 +201,11 @@ def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
         vtUri = json.loads(VT_Response.content)["data"]["links"]["self"]
         headerFormat = {"accept": "application/json", "x-apikey": API_KEYS[0]}
 
-        # get unique id for VT (scan result)
-        moddedId = json.loads(VT_Response.content)["data"]["id"]
-        for index, char in enumerate(moddedId[::-1]):
-            if char == "-":
-                index = len(moddedId) - index
-                moddedId = moddedId[: index - 1].strip("u-")
-                break
+        orgId = json.loads(VT_Response.content)["data"]["id"]
+
+        # only will use "front" variable as new request id
+        front, _char , _end = str(orgId).rpartition("-") # strips last `-` char
+        moddedId = front.strip("u-")
 
         # code for checking if url was previously scanned by VT
         harmlessCount, maliciousCount = 0, 0
@@ -311,6 +309,7 @@ def clearDirectories():
         for dir in dirs:
             dirList.append(root + os.sep + dir)
 
+    dirList = sorted(dirList)
     while directoryCount > 14:
         shutil.rmtree(dirList[0])
         dirList.remove(dirList[0])
