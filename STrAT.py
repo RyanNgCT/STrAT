@@ -269,7 +269,10 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
 
         # quite a messy way to sieve output hmm...
         intermediateData = json.loads(json.dumps(res_payload))
-        ipData = intermediateData["page"]
+        try:
+            ipData = intermediateData["page"]
+        except TypeError:
+            pass
         try:
             finalURL = intermediateData["data"]["requests"][1]["request"]["documentURL"]
         except (IndexError, KeyError) as e:
@@ -288,15 +291,15 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
             URLScan_Response.json()["message"] == "DNS Error - Could not resolve domain"
         ):
             print("\nUrlScan: Cannot resolve URL domain.")
-            return -1, None
         else:
             print("\nBlacklisted site by URL Scan... Skipping...")
-            return -1, None
+        return -1, None, None, None
 
     else:
         print(
             f"UrlScan: Request failed with status code {URLScan_Response.status_code}"
         )
+        return -1, None, None, None
 
 def clearDirectories():
     try:
@@ -373,13 +376,13 @@ def main():
                 spWheel1.stop()
                 if args.verbose:
                     print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
-                    if "country" in ipData and "city" in ipData:
-                        country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
-                        URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
-                        if city:
-                            URS_str = URS_str.rstrip("\n")
-                            URS_str += f", {city}.\n"
-                        print(URS_str)
+                    if ipData:
+                        if "country" in ipData and "city" in ipData:
+                            country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
+                            URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
+                            if city:
+                                URS_str = URS_str.rstrip("\n")
+                                URS_str += f", {city}.\n"
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
                     orgPath = resPath
