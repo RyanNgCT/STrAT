@@ -383,6 +383,7 @@ def main():
                             if city:
                                 URS_str = URS_str.rstrip("\n")
                                 URS_str += f", {city}.\n"
+                            print(URS_str)
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
                     orgPath = resPath
