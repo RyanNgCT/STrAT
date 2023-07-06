@@ -145,7 +145,7 @@ async def waitTilReply(url):
         while True:
             response_status = await fetch(session, url)
             if response_status == 200:
-                print("\nAPI endpoint returned 200. Processing is complete.\n")
+                print("\nUrlscan API endpoint returned 200.\n")
                 async with session.get(url) as resp:
                     text = await resp.json()
                 return text
@@ -378,7 +378,7 @@ def main():
                     print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
                     if ipData and all(key in ipData for key in ["country", "city"]):
                         country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
-                        URS_str = f"URLScan Classifications:\n===================\nLocation: {country.name}\n"
+                        URS_str = f"URLScan Classifications:\n===================\nLikely Server location: {country.name}\n"
                         if city:
                             URS_str = URS_str.rstrip("\n")
                             URS_str += f", {city}.\n"
