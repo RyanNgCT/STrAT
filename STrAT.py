@@ -209,12 +209,19 @@ def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
 
         # code for checking if url was previously scanned by VT
         harmlessCount, maliciousCount = 0, 0
+
+        # limit count of 90s (catch API timeout/unresponsive issues)
+        limit = 30
+
         while True:
             vtReport = requests.get(url=vtUri, headers=headerFormat)
             vtReport = vtReport.json()
             harmlessCount = vtReport["data"]["attributes"]["stats"]["harmless"]
             maliciousCount = vtReport["data"]["attributes"]["stats"]["malicious"]
 
+            if limit == 0: # limit check needed as status will be stuck and not completed if API times out.
+                return -1, None, None, None
+            
             # Scan Complete Check (didn't wanna implement async)
             if vtReport["data"]["attributes"]["status"] == "completed":
                 otherFormat = (
@@ -227,7 +234,9 @@ def runVT(rawURL, API_KEYS, VTIndex, scanVisibility="public"):
                 except KeyError:
                     finalURL = rawURL
                 break
+            limit -= 1
             time.sleep(3)
+
         # need to relook these metrics
         if (harmlessCount > maliciousCount) and maliciousCount < 8:
             VTIndex = 0
@@ -375,10 +384,11 @@ def main():
             else:
                 spWheel1.stop()
                 if args.verbose:
-                    print(f"\nVT classifications:\n=================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
+                    if VTmaliciousStatus != -1: # No errors/issues in VT API
+                        print(f"\nVT classifications:\n==================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
                     if ipData and all(key in ipData for key in ["country", "city"]):
                         country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
-                        URS_str = f"URLScan Classifications:\n===================\nLikely Server location: {country.name}\n"
+                        URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
                         if city:
                             URS_str = URS_str.rstrip("\n")
                             URS_str += f", {city}.\n"
@@ -388,6 +398,7 @@ def main():
                     if resPath:
                         orgPath = resPath
                         finalPath = resPath.replace(".", "[.]")
+                        # refang directory name
                         os.renames(os.getcwd() + f"/{orgPath}", os.getcwd() + f"/{finalPath}")
                 elif VTmaliciousStatus != URLSmaliciousStatus and URLSmaliciousStatus == 1:
                     print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not malicious. May require further validation.\n")
