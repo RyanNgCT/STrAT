@@ -396,11 +396,14 @@ def main():
                     if ipData and all(key in ipData for key in ["country", "city"]):
                         country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
                         country_ipData, cCode_ipData, city_ipData = getIPCountryInfo(API_KEYS[2], ipData["ip"])
-                        URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
-                        if city:
-                            URS_str = URS_str.rstrip("\n")
-                            URS_str += f", {city}.\n"
-                        print(URS_str, f'\n{str(country_ipData)}', cCode_ipData, city_ipData)
+                        if country.name == country_ipData:
+                            URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
+                            if city:
+                                URS_str = URS_str.rstrip("\n")
+                                URS_str += f", {city}.\n"
+                            print(URS_str, f'\n{str(country_ipData)}', city_ipData)
+                        else:
+                            print("URLScan Classifications:\n=======================\nMismatch in likely server locatio, thus not displayed.")
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     if URLSmaliciousStatus !=-1:
                         print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
