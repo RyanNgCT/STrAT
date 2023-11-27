@@ -1,4 +1,4 @@
-import requests, re, json, sys, time, os, shutil, argparse
+import requests, re, json, sys, time, os, shutil, argparse, ipdata
 import aiohttp, asyncio
 from assets.colours import bcolors
 from datetime import datetime
@@ -280,6 +280,7 @@ def runURS(rawURL, API_KEYS, URLScanIndex, scanVisibility="public"):
         intermediateData = json.loads(json.dumps(res_payload))
         try:
             ipData = intermediateData["page"]
+            # print(ipData)
         except TypeError:
             pass
         try:
@@ -328,9 +329,15 @@ def clearDirectories():
         directoryCount -= 1
 
 
+def getIPCountryInfo(api_key, ip_addr):
+    ipdata.api_key = api_key
+    ipdata.endpoint = "https://eu-api.ipdata.co" # set to EU API endpoint for GDPR
+    response = ipdata.lookup(str(ip_addr))
+    return response.country_name, response.region_code, response.city
+
 def main():
     API_KEYS = getAPIKey()
-    argDesc = '''STrAT v0.3: A VirusTotal x URLScan.io Website Scanning Tool.\nPlease ensure you do not submit sensitive links!\n'''
+    argDesc = '''STrAT v0.6: A VirusTotal x URLScan.io Website Scanning Tool.\nPlease ensure you do not submit sensitive links!\n'''
     parser = argparse.ArgumentParser(formatter_class = argparse.RawDescriptionHelpFormatter, description= argDesc)
     parser.add_argument("-u", "--url", help="Enter url to scan (defanged or ordinary URL both work).", required=True)
     parser.add_argument("-s", "--visibility", help="Select scan visibility: [ 1 ] Public Scan [ 2 ] Private Scan [ 3 ] Unlisted Scan.", \
@@ -388,11 +395,12 @@ def main():
                         print(f"\nVT classifications:\n==================\nMalicious: {maliciousCount}\nHarmless: {harmlessCount}\n")
                     if ipData and all(key in ipData for key in ["country", "city"]):
                         country, city = countries.get(alpha_2=str(ipData["country"])), ipData["city"]
+                        country_ipData, cCode_ipData, city_ipData = getIPCountryInfo(API_KEYS[2], ipData["ip"])
                         URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
                         if city:
                             URS_str = URS_str.rstrip("\n")
                             URS_str += f", {city}.\n"
-                        print(URS_str)
+                        print(URS_str, f'\n{str(country_ipData)}', cCode_ipData, city_ipData)
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     if URLSmaliciousStatus !=-1:
                         print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")
