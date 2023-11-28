@@ -158,6 +158,12 @@ def defangUrl(url):
     return url.replace(".", "[.]").replace("http", "hxxp")
 
 
+def defangIP(ipAddr):
+    octets = ipAddr.split('.')
+    defanged_ip = '.'.join(octets[:-1]) + '[.]' + octets[-1]
+    return defanged_ip
+
+
 def downloadURLScanImage(dir, uuid):
     imageURI = f"https://urlscan.io/screenshots/{uuid}.png"
     try:
@@ -398,9 +404,9 @@ def main():
                         country_ipData, cCode_ipData, city_ipData = getIPCountryInfo(API_KEYS[2], ipData["ip"])
                         if country.name == country_ipData:
                             URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
-                            if city:
+                            if city and ipData["ip"]:
                                 URS_str = URS_str.rstrip("\n")
-                                URS_str += f", {city}.\n"
+                                URS_str += f', {city}.\nIP Address: {defangIP(ipData["ip"])}\n'
                             print(URS_str, f'\n{str(country_ipData)}', city_ipData)
                         else:
                             print("URLScan Classifications:\n=======================\nMismatch in likely server locatio, thus not displayed.")
@@ -429,4 +435,8 @@ def main():
             print("Invalid URL Entered or server not contactable.")
 
 if __name__ == "__main__":
+    v = sys.version_info
+    if (v < (3, 10)):
+        print(f"{bcolors.WARNING}[-] STrAT v0.6 only works with Python 3.10+.{bcolors.ENDC}")
+        sys.exit(f"{bcolors.OKBLUE}[+] Please install the most recent version of Python 3 @ https://www.python.org/downloads/ {bcolors.ENDC}\n")
     main()
