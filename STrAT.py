@@ -369,6 +369,11 @@ def main():
         # default to public scan
         scanVisibility = "public"
 
+    v = sys.version_info
+    if (v < (3, 10)):
+        print(f"{bcolors.WARNING}[-] STrAT v0.6 only works with Python 3.10+.{bcolors.ENDC}")
+        sys.exit(f"{bcolors.OKBLUE}[+] Please install the most recent version of Python 3 @ https://www.python.org/downloads/ {bcolors.ENDC}\n")
+
     err = clearDirectories()
     if err:
         print(err)
@@ -442,8 +447,4 @@ def main():
             print("Invalid URL Entered or server not contactable.")
 
 if __name__ == "__main__":
-    v = sys.version_info
-    if (v < (3, 10)):
-        print(f"{bcolors.WARNING}[-] STrAT v0.6 only works with Python 3.10+.{bcolors.ENDC}")
-        sys.exit(f"{bcolors.OKBLUE}[+] Please install the most recent version of Python 3 @ https://www.python.org/downloads/ {bcolors.ENDC}\n")
     main()

@@ -32,7 +32,7 @@ _Subjected to changes_ as the project progresses
 - Feel free to create an issue for any suggestions or issues or use the PR functionality. 
 
 ## Requirements
-- Python 3.8.x+
+- Python 3.10+
 - See [requirements.txt](./requirements.txt) and install dependencies using:
 ```
 $ pip install -r requirements.txt
@@ -41,4 +41,5 @@ $ pip install -r requirements.txt
 ```
 VT_API_KEY = '<VIRUSTOTAL_API_KEY>'
 US_API_KEY = '<URLSCAN_API_KEY>'
+IP_DATA_KEY = '<IPDATA.CO_API_KEY>'
 ```
