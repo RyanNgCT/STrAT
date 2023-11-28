@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from assets.CustomThread import *
 from assets.Wheel import SpinnerThread
 from pycountry import countries
+from ipaddress import ip_address, IPv4Address, IPv6Address
 
 """ 
 NOTES
@@ -159,8 +160,12 @@ def defangUrl(url):
 
 
 def defangIP(ipAddr):
-    octets = ipAddr.split('.')
-    defanged_ip = '.'.join(octets[:-1]) + '[.]' + octets[-1]
+    if type(ip_address(ipAddr)) is IPv4Address:
+        octets = ipAddr.split('.')
+        defanged_ip = '.'.join(octets[:-1]) + '[.]' + octets[-1]
+    elif type(ip_address(ipAddr)) is IPv6Address:
+        v6parts = ipAddr.split(':')
+        defanged_ip = ':'.join(v6parts[:-1]) + '[:]' + v6parts[-1]
     return defanged_ip
 
 
@@ -404,9 +409,11 @@ def main():
                         country_ipData, cCode_ipData, city_ipData = getIPCountryInfo(API_KEYS[2], ipData["ip"])
                         if country.name == country_ipData:
                             URS_str = f"URLScan Classifications:\n=======================\nLikely Server location: {country.name}\n"
-                            if city and ipData["ip"]:
+                            if city:
                                 URS_str = URS_str.rstrip("\n")
-                                URS_str += f', {city}.\nIP Address: {defangIP(ipData["ip"])}\n'
+                                URS_str += f', {city}.\n'
+                            if ipData["ip"]:
+                                URS_str += f'IP Address: {defangIP(ipData["ip"])}\n'
                             print(URS_str, f'\n{str(country_ipData)}', city_ipData)
                         else:
                             print("URLScan Classifications:\n=======================\nMismatch in likely server locatio, thus not displayed.")
