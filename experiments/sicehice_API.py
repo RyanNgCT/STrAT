@@ -1,16 +1,18 @@
 from ipData_API import getSpecificAPIKey
-import requests, re, json, pprint
+import requests, re, json, sys
 
 
-def useAPI(method : str, queryIP : str = None):
-
+def useAPI(method : str, orgIP : str = None):
     # globals
     base_uri = "https://sicehice.com/api"
     info_uri = "https://iplocation.sicehice.com"
 
+    if orgIP:
+        queryIP = handleIPv4(orgIP)
+        if (not queryIP) and (orgIP.lower() != "localhost"):
+            sys.exit("Enter a valid IPv4 address!")
 
-    ipv4_pattern = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$')
-    if method.upper() == "SEARCH" and re.match(ipv4_pattern, queryIP):
+    if method.upper() == "SEARCH":
         params = { 'apikey' : getSpecificAPIKey(3), 'query' : queryIP }
         uri = f'{base_uri}/getip'
         try:
@@ -28,20 +30,21 @@ def useAPI(method : str, queryIP : str = None):
         except:
             return "Error retrieving usage quota info!"
     
-    elif method.upper() == "GETOWNINFO":
+    elif method.upper() == "GETOWNINFO" or (method.upper() == "GETIPINFO" and orgIP.lower() == "localhost"):
         resp = requests.get(info_uri)
         json_out = json.dumps(resp.text, sort_keys=True)
         return json_out.strip('\\')
     
     elif method.upper() == "GETIPINFO":
         uri = f'{info_uri}/api'
-        params = { 'apikey' : getSpecificAPIKey(3), 'ip' : queryIP}
-        resp = requests.get(uri, headers=params)
+        resp = requests.get(uri, params={'ip' : queryIP})
         return resp.text
 
+def handleIPv4(orgIP):
+    ipv4_pattern = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$')
+    match = ipv4_pattern.match(orgIP)
+    if match:
+        return orgIP
+    return False
 
-
-def handleIPv4():
-    pass
-
-print(useAPI("GETIPINFO", "8.8.4.4"))
+print(useAPI("SEARCH", "localhost"))
