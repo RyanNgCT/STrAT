@@ -52,7 +52,7 @@ def handleIPv4(orgIP : str):
 
 def logThreatInfo(threatList: list, queryIP: str):
     try:
-        logging.basicConfig(filename='threat.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+        logging.basicConfig(filename='threat.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
     except Exception as e:
         print(f"An exception occurred during logging setup: {e}")
 
@@ -60,7 +60,8 @@ def logThreatInfo(threatList: list, queryIP: str):
         logging.error("No threat info available!")
         return 
     
-    logging.info(f"IP Address: {queryIP}\n\n")
+    logging.info(f"IP Address: {queryIP}\n\n{'*' * 15}")
+    print(queryIP)
     for threat in threatList:
         source = threat.get('source', 'N/A')
         note = threat.get('note', 'N/A')
