@@ -7,3 +7,4 @@ toFix.log
 *__pycache__/
 results/*
 test.py
+logger.py

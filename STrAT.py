@@ -1,6 +1,7 @@
 import requests, re, json, sys, time, os, shutil, argparse, ipdata
 import aiohttp, asyncio
 from assets.colours import bcolors
+#from assets.logger import Logger
 from datetime import datetime
 from urllib.parse import urlparse
 from assets.CustomThread import *
@@ -101,7 +102,7 @@ def checkURLProtoinURI(raw_uri):
             if result2.status_code == 200:
                 return tryHTTPSNext
             elif (
-                result.status_code == 429 and
+                result2.status_code == 429 and
                 b"You have exceeded the request rate limit for this method." in result.content
             ):
                 sys.exit(
@@ -190,7 +191,7 @@ def createDirAndLog(finalurl, urlscanUriUid):
     if os.path.exists(storeDir):
         shutil.rmtree(storeDir)
     os.makedirs(storeDir)
-    # optional custom method to download urlscan screenshot
+    # custom method to download urlscan screenshot
     downloadURLScanImage(storeDir, urlscanUriUid)
     return storeDir
 
@@ -385,6 +386,7 @@ def main():
     else:
         # send values based on return value of url validation function
         VTIndex, URLScanIndex = -1, -1
+        domainName = str(urlparse(rawURL).netloc)
         if rawURL:
             spWheel1 = SpinnerThread("Processing...")
             spWheel1.start()
@@ -442,9 +444,11 @@ def main():
                     else:
                         print(f"{bcolors.OKGREEN}{VTurl}{bcolors.ENDC} is quite likely benign.\n")
 
+            return domainName
+
         # issues contacting server/totally invalid -> may need to validate 404
         else:
-            print("Invalid URL Entered or server not contactable.")
+            sys.exit("Invalid URL Entered or server not contactable.")
 
 if __name__ == "__main__":
     main()
