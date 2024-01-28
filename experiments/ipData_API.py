@@ -2,14 +2,22 @@ import ipdata
 import re, sys
 
 
-def getSpecificAPIKey():
+def getSpecificAPIKey(index):
     try:
-        with open("../.env", "r") as secretsFile:
-            for key in secretsFile:
-                # need to grep API_KEY as a string
-                if re.match(r"IPDATA\_API\_KEY", key):
-                    key = key.rpartition(" = ")[2]
-            return key
+       with open("../.env", "r") as secrets_file:
+            lines = secrets_file.readlines()
+
+            if 0 <= int(index) < len(lines):
+                key_value = lines[int(index)].strip().split(" = ")
+                if len(key_value) == 2 and key_value[1].startswith("'") and key_value[1].endswith("'"):
+                    return key_value[1][1:-1]
+                else:
+                    sys.exit("Invalid format for API key in .env file.")
+            else:
+                sys.exit(f"Index {index} out of range. Please provide a valid index.")
+
+    except FileNotFoundError:
+        sys.exit("File containing API Key not found. Please ensure file '.env' is in the same directory as the script.")
             
 
     except FileNotFoundError:
@@ -25,11 +33,12 @@ def getSpecificAPIKey():
 
 def getIPCountryInfo():
     ipToLookFor = str(input('Enter IP Address to lookup: '))
-    ipdata.api_key = getSpecificAPIKey().strip("'") # need to remove quotes
+    ipdata.api_key = getSpecificAPIKey(2).strip("'") # need to remove quotes
     ipdata.endpoint = "https://eu-api.ipdata.co" # set to EU API endpoint for GDPR
-    response = ipdata.lookup(ipToLookFor)
+    response = ipdata.lookup(ipToLookFor.lstrip().rstrip())
+    print(response)
     if response != None:
-        print(response.country_name, type(response))
+        print(response.country_name, response.city)
 
 
 # def getIPCountryInfo(api_key, ip_addr):
