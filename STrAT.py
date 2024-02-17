@@ -423,7 +423,7 @@ def main():
                                 URS_str += f'IP Address: {defangIP(ipData["ip"])}\n'
                             print(URS_str, f'\n{str(country_ipData)}', city_ipData)
                         else:
-                            print("URLScan Classifications:\n=======================\nMismatch in likely server locatio, thus not displayed.")
+                            print("URLScan Classifications:\n=======================\nMismatch in likely server location, thus not displayed here.")
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
                     if URLSmaliciousStatus !=-1:
                         print(f"VirusTotal has classified {bcolors.WARNING}{VTurl}{bcolors.ENDC} as MALICIOUS.\nURLScan on the other hand deems this to be not malicious. Proceed with caution.\n")

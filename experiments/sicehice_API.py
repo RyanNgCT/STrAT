@@ -68,5 +68,6 @@ def logThreatInfo(threatList: list, queryIP: str):
         print(source, note)
         logging.info(f"Source: {source}\nClassification: {note}\n")
 
-useAPI("SEARCHTHREATINFO", "148.163.93.51")
-useAPI("SEARCHTHREATINFO", "77.91.68.78")
+# useAPI("SEARCHTHREATINFO", "148.163.93.51")
+# useAPI("SEARCHTHREATINFO", "77.91.68.78")
+useAPI("SEARCHTHREATINFO", "165.154.225.110")
