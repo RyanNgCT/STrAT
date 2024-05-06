@@ -421,7 +421,7 @@ def main():
                                 URS_str += f', {city}.\n'
                             if ipData["ip"]:
                                 URS_str += f'IP Address: {defangIP(ipData["ip"])}\n'
-                            print(URS_str, f'\n{str(country_ipData)}', city_ipData)
+                            print(URS_str)
                         else:
                             print("URLScan Classifications:\n=======================\nMismatch in likely server location, thus not displayed here.")
                 if VTmaliciousStatus != URLSmaliciousStatus and VTmaliciousStatus == 1:
@@ -435,7 +435,7 @@ def main():
                         # refang directory name
                         os.renames(os.getcwd() + f"/{orgPath}", os.getcwd() + f"/{finalPath}")
                 elif VTmaliciousStatus != URLSmaliciousStatus and URLSmaliciousStatus == 1:
-                    print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not malicious. May require further validation.\n")
+                    print(f"URLScan has classified {bcolors.WARNING}{URLSurl}{bcolors.ENDC} as MALICIOUS.\nVirusTotal on the other hand deems this to be not likely malicious. May require further validation.\n")
                 elif VTmaliciousStatus == 1 and URLSmaliciousStatus == 1:
                     print(f"{bcolors.FAIL}Both scanners have classified {VTurl} as MALICIOUS.{bcolors.ENDC}\n")
                 else:
