@@ -16,8 +16,12 @@ def useAPI(urlToSS: str):
     }
 
     raw_response = requests.post(base_api_uri, headers=headers, data=params)
-
-    response = json.loads(raw_response.text)
+    if raw_response.status_code == 200:
+        response = json.loads(raw_response.text)
+    elif raw_response.status_code == 401:
+        sys.exit("Check your API key!")
+    else:
+        sys.exit("An error occurred!")
 
     try:
         raw_image_bytes = response['base64']
@@ -34,4 +38,4 @@ def useAPI(urlToSS: str):
 
     return 0
 
-useAPI('https://x.com')
+useAPI('https://www.nus.edu.sg')
