@@ -397,7 +397,7 @@ def main():
             try:
                 VTmaliciousStatus, VTurl, harmlessCount, maliciousCount = t1.join()
                 URLSmaliciousStatus, URLSurl, resPath, ipData = t2.join()
-            except AttributeError:
+            except (AttributeError, RuntimeError):
                 spWheel1.stop(rawURL)
                 sys.exit("\nUnable to start thread. Please check your internet connection.")
             except ValueError: # returns nothing (i.e., url on urlscan blacklist)

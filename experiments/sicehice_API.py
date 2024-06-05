@@ -1,4 +1,4 @@
-from ipData_API import getSpecificAPIKey
+from APIGetter import getSpecificAPIKey
 import requests, re, sys
 import logging
 
@@ -70,4 +70,5 @@ def logThreatInfo(threatList: list, queryIP: str):
 
 # useAPI("SEARCHTHREATINFO", "148.163.93.51")
 # useAPI("SEARCHTHREATINFO", "77.91.68.78")
-useAPI("SEARCHTHREATINFO", "165.154.225.110")
+# useAPI("SEARCHTHREATINFO", "165.154.225.110")
+useAPI("SEARCHTHREATINFO", "31.184.253.37")

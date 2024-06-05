@@ -2,9 +2,7 @@
 pyenv/*
 .env
 dump.json
-helpMenu.txt
-toFix.log
 *__pycache__/
 results/*
-test.py
 logger.py
+experiments/output.jpg

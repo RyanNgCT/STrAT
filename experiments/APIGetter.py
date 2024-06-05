@@ -1,8 +1,7 @@
 import ipdata
 import re, sys
 
-
-def getSpecificAPIKey(index):
+def getSpecificAPIKey(index: int) -> str:
     try:
        with open("../.env", "r") as secrets_file:
             lines = secrets_file.readlines()
